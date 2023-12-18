@@ -1,0 +1,111 @@
+/*
+ * You can use the following import statements
+ *
+ * import org.springframework.beans.factory.annotation.Autowired;
+ * import org.springframework.http.HttpStatus;
+ * import org.springframework.stereotype.Service;
+ * import org.springframework.web.server.ResponseStatusException;
+ * 
+ * import java.util.*;
+ *
+ */
+package com.example.wordlyweek.service;
+
+import com.example.wordlyweek.model.*;
+import com.example.wordlyweek.repository.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.*;
+
+@Service
+public class WriterJpaService implements WriterRepository {
+
+	@Autowired
+	private WriterJpaRepository writerJpaRepository;
+
+	@Autowired
+	private MagazineJpaRepository magazineJpaRepository;
+
+	@Override
+	public ArrayList<Writer> getWriters() {
+		return (ArrayList<Writer>) writerJpaRepository.findAll();
+	}
+
+	@Override
+	public Writer getWriterById(int writerId) {
+		try {
+			return writerJpaRepository.findById(writerId).get();
+		} catch (Exception e) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+		}
+	}
+
+	@Override
+	public Writer addWriter(Writer writer) {
+		try {
+			List<Integer> magazineIds = new ArrayList<>();
+			for (Magazine magazine : writer.getMagazines()) {
+				magazineIds.add(magazine.getMagazineId());
+			}
+			List<Magazine> magazines = magazineJpaRepository.findAllById(magazineIds);
+			if (magazines.size() != magazineIds.size()) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+			}
+			writer.setMagazines(magazines);
+			return writerJpaRepository.save(writer);
+		} catch (Exception e) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+		}
+	}
+
+	@Override
+	public Writer updateWriter(int writerId, Writer writer) {
+		try {
+			Writer newwriter = writerJpaRepository.findById(writerId).get();
+			if (writer.getWriterName() != null) {
+				newwriter.setWriterName(writer.getWriterName());
+			}
+			if (writer.getBio() != null) {
+				newwriter.setBio(writer.getBio());
+			}
+			if (writer.getMagazines() != null) {
+				List<Integer> magazinesIds = new ArrayList<>();
+				for (Magazine magazine : writer.getMagazines()) {
+					magazinesIds.add(magazine.getMagazineId());
+				}
+				List<Magazine> magazines = magazineJpaRepository.findAllById(magazinesIds);
+				if (magazines.size() != magazinesIds.size()) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+				}
+				newwriter.setMagazines(magazines);
+			}
+			return writerJpaRepository.save(newwriter);
+		} catch (NoSuchElementException e) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+		}
+	}
+
+	@Override
+	public void deleteWriter(int writerId) {
+		try {
+			writerJpaRepository.deleteById(writerId);
+		} catch (Exception e) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+		}
+		throw new ResponseStatusException(HttpStatus.NO_CONTENT);
+	}
+
+	@Override
+	public List<Magazine> getWrierMagazines(int writerId) {
+		try {
+			Writer writer = writerJpaRepository.findById(writerId).get();
+			return writer.getMagazines();
+		} catch (Exception e) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+		}
+	}
+
+}
